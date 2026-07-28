@@ -40,7 +40,12 @@ fmt.Println(stats.Min)
 fmt.Println(stats.Max)
 ```
 
-### Reading integers from a stream
+## Reading from streams
+
+Both `StreamInt` and `StreamFloat` accept any `io.Reader` and a
+`bufio.SplitFunc`, allowing you to control how the input is tokenized.
+
+### One value per line
 
 ```go
 file, err := os.Open("numbers.txt")
@@ -49,13 +54,10 @@ if err != nil {
 }
 defer file.Close()
 
-stats, err := summary.StreamInt(file)
-if err != nil {
-    log.Fatal(err)
-}
+stats, err := summary.StreamInt(file, bufio.ScanLines)
 ```
 
-Example input:
+Input:
 
 ```text
 10
@@ -64,35 +66,59 @@ Example input:
 40
 ```
 
-### Reading floating-point numbers
+---
+
+### Space-separated values
 
 ```go
-file, err := os.Open("values.txt")
+file, err := os.Open("numbers.txt")
 if err != nil {
     log.Fatal(err)
 }
 defer file.Close()
 
-stats, err := summary.StreamFloat(file, 64)
-if err != nil {
-    log.Fatal(err)
-}
+stats, err := summary.StreamInt(file, bufio.ScanWords)
 ```
+
+Input:
+
+```text
+10 20 30 40
+```
+
+---
+
+### Mixed input
+
+Using `bufio.ScanWords`, invalid tokens are ignored.
+
+Input:
+
+```text
+10
+20
+hello
+30
+40 foo
+50
+```
+
+Only the numeric tokens are included in the statistics.
 
 ## API
 
 ### Slice functions
 
 ```go
-summary.Ints(...)
-summary.Floats(...)
+summary.Ints[T integer](t ...T) IntSummary
+summary.Floats[T float](t ...T) FloatSummary
 ```
 
 ### Stream functions
 
 ```go
-summary.StreamInts(...)
-summary.StreamFloats(...)
+summary.StreamInts(r io.Reader, split bufio.SplitFunc) (IntSummary, error)
+summary.StreamFloats(r io.Reader, bitSize int, split bufio.SplitFunc) (FloatSummary, error)
 ```
 
 ## License
