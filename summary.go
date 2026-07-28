@@ -93,18 +93,20 @@ func Floats[T float](t ...T) FloatSummary {
 	}
 }
 
-// StreamInts reads integers from r and computes summary statistics.
+// StreamInt reads integers from r and computes summary statistics.
 //
-// Each line is parsed as an integer using a bufio.Scanner.
-// Lines that cannot be parsed are ignored.
+// Input is tokenized using the provided bufio.SplitFunc.
+// Each token is parsed as an integer using strconv.Atoi.
+// Tokens that cannot be parsed are ignored.
 //
 // StreamInt does not close r; the caller is responsible for closing it,
 // if necessary.
 //
-// If the scanner encounters an I/O error, an empty IntSummary and
-// the corresponding error are returned.
-func StreamInts(r io.Reader) (IntSummary, error) {
+// If the scanner encounters an I/O error, an empty IntSummary and the
+// corresponding error are returned.
+func StreamInts(r io.Reader, split bufio.SplitFunc) (IntSummary, error) {
 	scanner := bufio.NewScanner(r)
+	scanner.Split(split)
 
 	var (
 		count int
@@ -153,23 +155,25 @@ func StreamInts(r io.Reader) (IntSummary, error) {
 	}, nil
 }
 
-// StreamFloats reads floating-point numbers from r and computes summary
+// StreamFloat reads floating-point numbers from r and computes summary
 // statistics.
 //
-// Each line is parsed using strconv.ParseFloat with the provided bitSize.
-// Lines that cannot be parsed are ignored.
+// Input is tokenized using the provided bufio.SplitFunc.
+// Each token is parsed using strconv.ParseFloat with the provided bitSize.
+// Tokens that cannot be parsed are ignored.
 //
 // StreamFloat does not close r; the caller is responsible for closing it,
 // if necessary.
 //
 // If the scanner encounters an I/O error, an empty FloatSummary and the
 // corresponding error are returned.
-func StreamFloats(r io.Reader, bitSize int) (FloatSummary, error) {
+func StreamFloats(r io.Reader, bitSize int, split bufio.SplitFunc) (FloatSummary, error) {
 	if bitSize != 32 && bitSize != 64 {
 		return FloatSummary{}, errors.New("invalid bitSize")
 	}
 
 	scanner := bufio.NewScanner(r)
+	scanner.Split(split)
 
 	var (
 		count int
