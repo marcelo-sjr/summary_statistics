@@ -1,6 +1,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/marcelo-sjr/summary_statistics.svg)](https://pkg.go.dev/github.com/marcelo-sjr/summary_statistics)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/marcelo-sjr/summary_statistics)](go.mod)
+
 # Summary
 
 `summary` is a lightweight Go library for computing summary statistics from numeric collections and streams.
@@ -11,14 +12,16 @@ It provides an API inspired by Java's `IntSummaryStatistics` and `DoubleSummaryS
 
 - Generic support for integer and floating-point slices
 - Read numbers directly from any `io.Reader`
+- Configurable tokenization using `bufio.SplitFunc`
+- `bufio.ScanWords` is used by default when no split function is provided
 - Computes:
   - Count
   - Sum
   - Average
   - Minimum
   - Maximum
-- Invalid lines are ignored when reading streams
-- Small, dependency-free package
+- Invalid tokens are ignored when reading streams
+- Dependency-free
 
 ## Installation
 
@@ -28,10 +31,22 @@ go get github.com/marcelo-sjr/summary_statistics
 
 ## Usage
 
-### Example
+### Slice
 
 ```go
-stats := summary.Int(10, 20, 30, 40)
+stats := summary.Ints(10, 20, 30, 40)
+
+fmt.Println(stats.Count)
+fmt.Println(stats.Sum)
+fmt.Println(stats.Avg)
+fmt.Println(stats.Min)
+fmt.Println(stats.Max)
+```
+
+### Floating-point slice
+
+```go
+stats := summary.Floats(1.5, 2.5, 3.5)
 
 fmt.Println(stats.Count)
 fmt.Println(stats.Sum)
@@ -42,19 +57,37 @@ fmt.Println(stats.Max)
 
 ## Reading from streams
 
-Both `StreamInt` and `StreamFloat` accept any `io.Reader` and a
-`bufio.SplitFunc`, allowing you to control how the input is tokenized.
+`ReadInts` and `ReadFloats` accept any `io.Reader`.
 
-### One value per line
+By default, input is tokenized using `bufio.ScanWords`. You may provide a custom `bufio.SplitFunc` when different tokenization is required.
+
+### Default behavior
 
 ```go
 file, err := os.Open("numbers.txt")
 if err != nil {
-    log.Fatal(err)
+	log.Fatal(err)
 }
 defer file.Close()
 
-stats, err := summary.StreamInt(file, bufio.ScanLines)
+stats, err := summary.ReadInts(file, nil)
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+Input:
+
+```text
+10 20 30 40
+```
+
+---
+
+### One value per line
+
+```go
+stats, err := summary.ReadInts(file, bufio.ScanLines)
 ```
 
 Input:
@@ -71,13 +104,7 @@ Input:
 ### Space-separated values
 
 ```go
-file, err := os.Open("numbers.txt")
-if err != nil {
-    log.Fatal(err)
-}
-defer file.Close()
-
-stats, err := summary.StreamInt(file, bufio.ScanWords)
+stats, err := summary.ReadInts(file, bufio.ScanWords)
 ```
 
 Input:
@@ -90,9 +117,7 @@ Input:
 
 ### Mixed input
 
-Using `bufio.ScanWords`, invalid tokens are ignored.
-
-Input:
+Invalid tokens are ignored.
 
 ```text
 10
@@ -103,22 +128,22 @@ hello
 50
 ```
 
-Only the numeric tokens are included in the statistics.
+Only numeric tokens are included in the statistics.
 
 ## API
 
 ### Slice functions
 
 ```go
-summary.Ints[T integer](t ...T) IntSummary
-summary.Floats[T float](t ...T) FloatSummary
+summary.Ints[T integer](values ...T) IntSummary
+summary.Floats[T float](values ...T) FloatSummary
 ```
 
-### Stream functions
+### Reader functions
 
 ```go
-summary.StreamInts(r io.Reader, split bufio.SplitFunc) (IntSummary, error)
-summary.StreamFloats(r io.Reader, bitSize int, split bufio.SplitFunc) (FloatSummary, error)
+summary.ReadInts(r io.Reader, split bufio.SplitFunc) (IntSummary, error)
+summary.ReadFloats(r io.Reader, split bufio.SplitFunc) (FloatSummary, error)
 ```
 
 ## License
