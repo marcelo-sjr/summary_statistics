@@ -2,13 +2,12 @@ package summary
 
 import (
 	"bufio"
-	"errors"
 	"io"
 	"strconv"
 )
 
 type integer interface {
-	~int | ~int32 | ~int64 | ~int8 | ~int16
+	~int | ~int8 | ~int16 | ~int32 | ~int64
 }
 
 type float interface {
@@ -17,10 +16,10 @@ type float interface {
 
 type IntSummary struct {
 	Count int
-	Sum   int
+	Sum   int64
 	Avg   float64
-	Min   int
-	Max   int
+	Min   int64
+	Max   int64
 }
 
 type FloatSummary struct {
@@ -32,17 +31,19 @@ type FloatSummary struct {
 }
 
 // Ints computes summary statistics for a collection of integer values.
-// the average is returned as a float64.
+// The average is returned as a float64.
 func Ints[T integer](t ...T) IntSummary {
 	if len(t) == 0 {
 		return IntSummary{}
 	}
 
-	var sum T
-	min := t[0]
-	max := t[0]
+	var sum int64
+	min := int64(t[0])
+	max := int64(t[0])
 
-	for _, value := range t {
+	for _, v := range t {
+		value := int64(v)
+
 		sum += value
 
 		if value < min {
@@ -56,23 +57,24 @@ func Ints[T integer](t ...T) IntSummary {
 
 	return IntSummary{
 		Count: len(t),
-		Sum:   int(sum),
+		Sum:   sum,
 		Avg:   float64(sum) / float64(len(t)),
-		Min:   int(min),
-		Max:   int(max),
+		Min:   min,
+		Max:   max,
 	}
 }
 
-// Float computes summary statistics for a collection of floating-point values.
+// Floats computes summary statistics for a collection of floating-point values.
 // If the input is float32, the returned statistics are promoted to
 // float64.
 func Floats[T float](t ...T) FloatSummary {
 	if len(t) == 0 {
 		return FloatSummary{}
 	}
-	var sum T
-	min, max := t[0], t[0]
-	for _, value := range t {
+	var sum float64
+	min, max := float64(t[0]), float64(t[0])
+	for _, v := range t {
+		value := float64(v)
 		sum += value
 
 		if value < min {
@@ -86,37 +88,42 @@ func Floats[T float](t ...T) FloatSummary {
 
 	return FloatSummary{
 		Count: len(t),
-		Sum:   float64(sum),
-		Avg:   float64(sum) / float64(len(t)),
-		Min:   float64(min),
-		Max:   float64(max),
+		Sum:   sum,
+		Avg:   sum / float64(len(t)),
+		Min:   min,
+		Max:   max,
 	}
 }
 
-// StreamInt reads integers from r and computes summary statistics.
+// ReadInts reads integers from r and computes summary statistics.
 //
-// Input is tokenized using the provided bufio.SplitFunc.
+// Input can be tokenized using the provided bufio.SplitFunc.
+// If split is nil, bufio.ScanWords is used.
 // Each token is parsed as an integer using strconv.Atoi.
 // Tokens that cannot be parsed are ignored.
 //
-// StreamInt does not close r; the caller is responsible for closing it,
+// ReadInts does not close r; the caller is responsible for closing it,
 // if necessary.
 //
 // If the scanner encounters an I/O error, an empty IntSummary and the
 // corresponding error are returned.
-func StreamInts(r io.Reader, split bufio.SplitFunc) (IntSummary, error) {
+func ReadInts(r io.Reader, split bufio.SplitFunc) (IntSummary, error) {
+	if split == nil {
+		split = bufio.ScanWords
+	}
+
 	scanner := bufio.NewScanner(r)
 	scanner.Split(split)
 
 	var (
 		count int
-		sum   int
-		min   int
-		max   int
+		sum   int64
+		min   int64
+		max   int64
 	)
 
 	for scanner.Scan() {
-		value, err := strconv.Atoi(scanner.Text())
+		value, err := strconv.ParseInt(scanner.Text(), 10, 64)
 		if err != nil {
 			continue
 		}
@@ -155,21 +162,22 @@ func StreamInts(r io.Reader, split bufio.SplitFunc) (IntSummary, error) {
 	}, nil
 }
 
-// StreamFloat reads floating-point numbers from r and computes summary
+// ReadFloats reads floating-point numbers from r and computes summary
 // statistics.
 //
-// Input is tokenized using the provided bufio.SplitFunc.
-// Each token is parsed using strconv.ParseFloat with the provided bitSize.
+// Input can be tokenized using the provided bufio.SplitFunc.
+// If split is nil, bufio.ScanWords is used.
+// Each token is parsed using strconv.ParseFloat with the bitSize=64.
 // Tokens that cannot be parsed are ignored.
 //
-// StreamFloat does not close r; the caller is responsible for closing it,
+// ReadFloats does not close r; the caller is responsible for closing it,
 // if necessary.
 //
 // If the scanner encounters an I/O error, an empty FloatSummary and the
 // corresponding error are returned.
-func StreamFloats(r io.Reader, bitSize int, split bufio.SplitFunc) (FloatSummary, error) {
-	if bitSize != 32 && bitSize != 64 {
-		return FloatSummary{}, errors.New("invalid bitSize")
+func ReadFloats(r io.Reader, split bufio.SplitFunc) (FloatSummary, error) {
+	if split == nil {
+		split = bufio.ScanWords
 	}
 
 	scanner := bufio.NewScanner(r)
@@ -183,7 +191,7 @@ func StreamFloats(r io.Reader, bitSize int, split bufio.SplitFunc) (FloatSummary
 	)
 
 	for scanner.Scan() {
-		value, err := strconv.ParseFloat(scanner.Text(), bitSize)
+		value, err := strconv.ParseFloat(scanner.Text(), 64)
 		if err != nil {
 			continue
 		}
