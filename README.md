@@ -1,6 +1,8 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/marcelo-sjr/summary_statistics.svg)](https://pkg.go.dev/github.com/marcelo-sjr/summary_statistics)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/marcelo-sjr/summary_statistics)](go.mod)
+[![GitHub release](https://img.shields.io/github/v/release/marcelo-sjr/summary_statistics)](https://github.com/marcelo-sjr/summary_statistics/releases)
+![Stable API](https://img.shields.io/badge/API-stable-brightgreen)
 
 # Summary
 
